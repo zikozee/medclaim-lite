@@ -33,3 +33,19 @@ def test_csv_excludes_voided_claims(client, seed):
     claim = seed.claim(patient_id="P-2001", amount_cents=9_900)
     void_claim(claim.id, reason="duplicate")
     assert claim.id not in statement_to_csv("P-2001")
+
+
+def test_csv_endpoint_returns_200_with_csv(client, seed):
+    from fastapi.testclient import TestClient
+
+    from medclaim.api import app
+
+    claim = seed.claim(patient_id="P-2001", amount_cents=12_500)
+    resp = TestClient(app).get("/patients/P-2001/statement.csv")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    rows = _rows(resp.text)
+    assert rows[0] == ["claim_id", "service_date", "charge", "voided"]
+    assert [claim.id, "2024-06-01", "125.00", "false"] in rows
+    assert rows[-3] == ["TOTAL_CHARGES", "", "125.00", ""]
+    assert rows[-1] == ["BALANCE", "", "125.00", ""]
