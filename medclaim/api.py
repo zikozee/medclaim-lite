@@ -9,6 +9,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 
+from medclaim.billing.csv_export import statement_to_csv
 from medclaim.billing.history import get_statement_history
 from medclaim.billing.render_legacy import render_statement_legacy
 from medclaim.billing.statement import build_statement
@@ -72,3 +73,9 @@ def patient_statement_legacy_text(patient_id: str) -> Response:
     if not stmt.lines:
         raise HTTPException(status_code=404, detail="no statement for patient")
     return Response(content=render_statement_legacy(stmt), media_type="text/plain")
+
+
+@app.get("/patients/{patient_id}/statement.csv")
+def patient_statement_csv(patient_id: str) -> Response:
+    body = statement_to_csv(patient_id)
+    return Response(content=body, media_type="text/csv")
